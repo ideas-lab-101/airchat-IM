@@ -48,7 +48,7 @@ func NewConfig() *Config {
 		MaxProc: runtime.NumCPU(),
 		// proto section
 		TCPAddr:       "localhost:8080",
-		WebsocketAddr: "localhost:8090",
+		WebsocketAddr: "localhost:8089",
 		Sndbuf:        2048,
 		Rcvbuf:        256,
 		Type:          ProtoWebsocket, // ProtoWebsocket  ProtoTCP

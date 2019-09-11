@@ -108,7 +108,7 @@ func NewConfig() *Config {
 		TCPRcvbuf:    1024,
 		TCPKeepalive: false,
 		// websocket
-		WebsocketBind: []string{"0.0.0.0:8090"},
+		WebsocketBind: []string{"0.0.0.0:8089"},
 		// websocket tls
 		WebsocketTLSOpen:     false,
 		WebsocketTLSBind:     []string{"0.0.0.0:8095"},

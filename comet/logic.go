@@ -26,6 +26,7 @@ var (
 	logicServiceIsTypeing               = "RPC.ClientIsTypeing"
 	logicServiceRecalledOne             = "RPC.ClientRecalledOne"
 	logicServiceRecalledOneSuccess      = "RPC.ClientRecalledOneSuccess"
+	logicHttpSpacialMsgReset            = "RPC.HttpSpacialMsgReset"
 )
 
 func InitLogicRpc(addrs []string) (err error) {
@@ -83,9 +84,9 @@ func disconnect(key string, roomId int32) (has bool, err error) {
 }
 
 //***消息的处理
-func processMessage(p *proto.Proto) (err error) {
+func processMessage(p *proto.Proto, messageSendTime string) (err error) {
 	var (
-		arg   = proto.DeliverMessageArg{Message: string(p.Body)}
+		arg   = proto.DeliverMessageArg{Message: string(p.Body), MessageSendTime: messageSendTime}
 		reply = proto.DeliverMessageReply{}
 	)
 
@@ -221,4 +222,43 @@ func resetPushNumber(p *proto.Proto) (err error) {
 
 	return
 
+}
+
+//******http 的推送调用
+// logicHttpSpacialImMessage           = "RPC.HttpSpacialImMessage"
+// func httpSpacialMessage(receiveAccount string, messageKind string) (err error) {
+// 	var (
+// 		args  = proto.HttpSpacialImMessageArgs{ReceiveAccount: receiveAccount, MessageKind: messageKind}
+// 		reply = proto.HttpSpacialImMessageReply{}
+// 	)
+// 	if err = logicRpcClient.Call(logicHttpSpacialImMessage, &args, &reply); err != nil {
+// 		log.Error("c.Call(\"%s\", \"%v\", &ret) error(%v)", logicHttpSpacialImMessage, args, err)
+// 		return
+// 	}
+
+// 	if reply.ErrorString == "" {
+// 		err = nil
+// 	} else {
+// 		err = errors.New(reply.ErrorString)
+// 	}
+
+// 	return
+// }
+
+func resetSpecialMessageState(p *proto.Proto) (err error) {
+	var (
+		arg   = proto.HttpSpacialMsgResetArgs{MsgResetInfo: string(p.Body)}
+		reply = proto.HttpSpacialMsgResetReply{}
+	)
+	if err = logicRpcClient.Call(logicHttpSpacialMsgReset, &arg, &reply); err != nil {
+		log.Error("c.Call(\"%s\", \"%v\", &ret) error(%v)", logicHttpSpacialMsgReset, arg, err)
+		return
+	}
+
+	if reply.ErrorString == "" {
+		err = nil
+	} else {
+		err = errors.New(reply.ErrorString)
+	}
+	return
 }

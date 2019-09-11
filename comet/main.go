@@ -103,6 +103,7 @@ func main() {
 	if err := InitRPCPush(Conf.RPCPushAddrs); err != nil {
 		panic(err)
 	}
+
 	fmt.Println("结尾处")
 	// block until a signal is received.
 	InitSignal()

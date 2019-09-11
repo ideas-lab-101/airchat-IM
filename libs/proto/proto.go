@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	log "github.com/thinkboy/log4go"
 	"goim/libs/bufio"
 	"goim/libs/bytes"
 	"goim/libs/crypto/aes"
@@ -143,13 +144,22 @@ func (p *Proto) WriteTCP(wr *bufio.Writer) (err error) {
 }
 
 func (p *Proto) ReadWebsocket(wr *websocket.Conn) (err error) {
-	// fmt.Println("wr的值是", wr.)
+	// fmt.Println("HHHHHHHH")
 	var pEn *ProtoEn = new(ProtoEn)
 	err = wr.ReadJSON(pEn)
+
+	if err != nil {
+		log.Debug("ReadWebsocket err(ReadJSON):", err, "pEn = ", pEn)
+		return
+	}
 
 	origData, _ := aes.DesMethod(pEn.JsonBody)
 	err = json.Unmarshal([]byte(origData), p)
 
+	if err != nil {
+		log.Debug("ReadWebsocket err(DesMethod):", err)
+		return
+	}
 	// err = wr.ReadJSON(p)
 
 	return
@@ -195,7 +205,7 @@ func (p *Proto) WriteWebsocket(wr *websocket.Conn) (err error) {
 	if p.Body == nil {
 		p.Body = emptyJSONBody
 	}
-	// [{"ver":1,"op":8,"seq":1,"body":{}}, {"ver":1,"op":3,"seq":2,"body":{}}]
+
 	if p.Operation == define.OP_RAW {
 		// batch mod
 		var b = bytes.NewWriterSize(len(p.Body) + 40*RawHeaderSize)
@@ -211,12 +221,14 @@ func (p *Proto) WriteWebsocket(wr *websocket.Conn) (err error) {
 	var bodyBytes []byte
 	bodyBytes, err = json.Marshal(*p)
 	resultEn, _ := aes.AesMethod(string(bodyBytes))
-	// fmt.Println("write p = ", string(bodyBytes))
-	// fmt.Println("write p = ", resultEn)
 
 	var pEn *ProtoEn = new(ProtoEn)
 	pEn.JsonBody = resultEn
 	err = wr.WriteJSON([]*ProtoEn{pEn})
+
+	if err != nil {
+		log.Debug("WriteWebsocket err:", err)
+	}
 
 	return
 }

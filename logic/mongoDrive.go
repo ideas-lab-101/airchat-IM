@@ -4,10 +4,10 @@ import (
 	"github.com/tidwall/gjson"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
+	// "log"
+	log "github.com/thinkboy/log4go"
 	"strconv"
 	"time"
-
 	//***abc自己的代码
 	"fmt"
 )
@@ -37,19 +37,95 @@ type MessageRecalled struct {
 	IsRecalled      bool
 }
 
+type SpecialMessage struct {
+	ReceiveAccount  string
+	CreateAccount  string
+	MessageKind     string
+	MessageIdClient string
+	Content         string
+	IsReceived      bool
+}
+
+type UserInfomation struct {
+	Account       string
+	DeviceToken   string
+	UserId        int64
+	VoiceSettings string
+	OsType        string
+}
+
 const (
-	databaseUrl  = "118.24.158.102:27017"
-	database     = "qxProject"
-	source       = "qxProject"
-	sourcePush   = "qxPush"
-	sourceRecall = "qxRecall"
-	username     = "qxUser"
-	password     = "Aa135412."
+	databaseUrl    = "127.0.0.1:27017"
+	database       = "qxProject"
+	source         = "qxProject"
+	sourcePush     = "qxPush"
+	sourceRecall   = "qxRecall"
+	sourceSpecial  = "qxSpecial"
+	sourceUserInfo = "qxUserInfo"
+	username       = "qxUser"
+	password       = "Aa135412."
 )
 
 var (
 	golalSession *mgo.Session
 )
+
+/******
+   ****
+   ****  持久化缓存一些聊天中数据
+   ****
+******/
+
+func insertUserInfo(userName string, deviceToken string, userId int64, voiceSettings string, os_type string) {
+	session, err := getSession()
+	if err != nil {
+		log.Debug("数据库连接错误:", err)
+		return
+	}
+
+	defer session.Close()
+	c := session.DB(database).C(sourceUserInfo)
+
+	//fmt.Println("userName = ", userName, " deviceToken = ", deviceToken, " userId = ", userId, " voiceSettings = ", voiceSettings)
+	err = c.Update(bson.M{"account": userName}, bson.M{"$set": bson.M{"devicetoken": deviceToken, "voicesettings": voiceSettings, "ostype" : os_type}})
+	if err != nil {
+		log.Debug("userInfo消息状态更新错误:", err)
+
+		err = c.Insert(&UserInfomation{userName, deviceToken, userId, voiceSettings, os_type})
+		if err != nil {
+			log.Debug("userInfo消息插入错误:", err)
+			return
+		}
+	}
+}
+
+func getUserId(userName string) (userInfo UserInfomation, err error) {
+	session, err := getSession()
+	if err != nil {
+		log.Debug("数据库连接错误:", err)
+		return
+	}
+	defer session.Close()
+
+	c := session.DB(database).C(sourceUserInfo)
+	err = c.Find(bson.M{"account": userName}).One(&userInfo)
+
+	return
+}
+
+func getUserDeviceTokenMoethod(userName string) (userInfo UserInfomation, err error) {
+	session, err := getSession()
+	if err != nil {
+		log.Debug("数据库连接错误:", err)
+		return
+	}
+	defer session.Close()
+
+	c := session.DB(database).C(sourceUserInfo)
+	err = c.Find(bson.M{"account": userName}).One(&userInfo)
+
+	return
+}
 
 /******
    ****
@@ -61,14 +137,14 @@ func insertMessage(messageCreator string, messageReceiver string, messageBody st
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return
 	}
 	defer session.Close()
 
 	err = inserData(session, messageCreator, messageReceiver, messageBody, isreaded)
 	if err != nil {
-		fmt.Println("消息插入错误:", err)
+		log.Debug("消息插入错误:", err)
 		return
 	}
 
@@ -85,14 +161,14 @@ func findAllUnreadMessage(authBody string) (resultMessageArr []MessageMongo, err
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return
 	}
 	defer session.Close()
 
 	resultMessageArr, err = findAllUnreadData(session, userName)
 	if err != nil {
-		fmt.Println("所有消息查询错误:", err)
+		log.Debug("所有消息查询错误:", err)
 		// log.Fatal(err)
 	}
 
@@ -108,6 +184,7 @@ func updateMessageReadSate(getMsgSuccessInfo string) (err error) {
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
+		log.Debug("数据库连接错误:", err)
 		fmt.Println("数据库连接错误:", err)
 		return
 	}
@@ -115,8 +192,8 @@ func updateMessageReadSate(getMsgSuccessInfo string) (err error) {
 
 	err = updateData(session, messageIdClient, messageReceiver)
 	if err != nil {
-		fmt.Println("消息状态更新错误:", err)
-		// log.Fatal(err)
+		log.Debug("消息状态更新错误:", err)
+		fmt.Println("数据库更新错误:", err)
 	}
 
 	return
@@ -146,14 +223,15 @@ func getSession() (session *mgo.Session, err error) {
 		golalSession, err = mgo.DialWithInfo(dialInfo)
 	}
 
-	session = golalSession.Clone()
-	// session, err = mgo.DialWithInfo(dialInfo)
 	if err == nil {
+		// session, err = mgo.DialWithInfo(dialInfo)
+		session = golalSession.Clone()
+
 		// Optional. Switch the session to a monotonic behavior.
 		session.SetMode(mgo.Monotonic, true)
 	} else {
-		fmt.Println("数据库连接错误")
-		log.Fatal(err)
+		log.Debug("数据库连接错误")
+		// log.Fatal(err)
 	}
 	return
 }
@@ -167,9 +245,10 @@ func inserData(session *mgo.Session, messageCreator string, messageReceiver stri
 	MessageIdClient := gjson.Get(messageBody, "MessageIdClient").String()
 	MessageIdServer := gjson.Get(messageBody, "MessageIdServer").String()
 
+	// fmt.Println("messageCreator = ", messageCreator, " messageReceiver = ", messageReceiver, " messageBody = ", messageBody, " MessageIdClient = ", MessageIdClient)
 	err = c.Insert(&MessageMongo{messageCreator, messageReceiver, messageBody, messagegetTime, MessageIdClient, MessageIdServer, isreaded, ""})
 	if err != nil {
-		fmt.Println("数据插入错误")
+		log.Debug("数据插入错误")
 		// log.Fatal(err)
 	}
 	return
@@ -178,7 +257,7 @@ func inserData(session *mgo.Session, messageCreator string, messageReceiver stri
 //***消息置位 未读->已读
 func updateData(session *mgo.Session, messageIdClient string, messageReceiver string) (err error) {
 	c := session.DB(database).C(source)
-	err = c.Update(bson.M{"messageidclient": messageIdClient, "userreceiverchatid": messageReceiver}, bson.M{"$set": bson.M{"isreaded": true}})
+	err = c.Update(bson.M{"messageidclient": messageIdClient, "userreceiverchatid": messageReceiver, "isreaded": false}, bson.M{"$set": bson.M{"isreaded": true}})
 	return
 }
 
@@ -222,7 +301,7 @@ func addNumberOfPushes(messagePushId string) int32 {
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return 0
 	}
 	defer session.Close()
@@ -233,7 +312,7 @@ func addNumberOfPushes(messagePushId string) int32 {
 	err = c.Find(bson.M{"messagepushid": messagePushId}).One(&resultMessage)
 
 	if err != nil {
-		fmt.Println("查询错误:", err)
+		log.Debug("查询错误:", err)
 		//****没查到就插入一个数据
 		err = c.Insert(&MessagePush{messagePushId, 0, strconv.FormatInt(time.Now().UTC().UnixNano(), 10)})
 		return 0
@@ -249,7 +328,7 @@ func resetNumberOfPushes(messagePushId string) {
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return
 	}
 	defer session.Close()
@@ -260,11 +339,10 @@ func resetNumberOfPushes(messagePushId string) {
 
 //***判断这个消息要不要推送
 func whetherNeedPushThisMessage(messageReceiver string, messageIdServer string) bool {
-
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return true
 	}
 	defer session.Close()
@@ -274,6 +352,12 @@ func whetherNeedPushThisMessage(messageReceiver string, messageIdServer string) 
 	c := session.DB(database).C(source)
 	_ = c.Find(bson.M{"userreceiverchatid": messageReceiver, "messageidserver": messageIdServer}).One(&resultMessage)
 	return resultMessage.Isreaded
+}
+
+
+func searchAndroidPushAccount(){
+
+
 }
 
 /******
@@ -286,7 +370,7 @@ func whetherNeedPushThisMessage(messageReceiver string, messageIdServer string) 
 func addRecalledMessageTypeOne(messageCreator, messageReceiver string, messageIdClient string) (err error) {
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return
 	}
 	defer session.Close()
@@ -294,13 +378,13 @@ func addRecalledMessageTypeOne(messageCreator, messageReceiver string, messageId
 	c := session.DB(database).C(sourceRecall)
 	err = c.Insert(&MessageRecalled{messageCreator, messageReceiver, messageIdClient, 0, false})
 	if err != nil {
-		fmt.Println("Recalled消息插入错误:", err)
+		log.Debug("Recalled消息插入错误:", err)
 		return
 	}
 
 	err = updateData(session, messageIdClient, messageReceiver)
 	if err != nil {
-		fmt.Println("Recalled消息状态更新错误:", err)
+		log.Debug("Recalled消息状态更新错误:", err)
 	}
 
 	return
@@ -315,7 +399,7 @@ func getAllOfflineRecalledMsg(recalledBody string) (resultMessageArr []MessageRe
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return
 	}
 	defer session.Close()
@@ -324,7 +408,7 @@ func getAllOfflineRecalledMsg(recalledBody string) (resultMessageArr []MessageRe
 	err = c.Find(bson.M{"messagereceiver": messageCreator, "isrecalled": false}).All(&resultMessageArr)
 
 	if err != nil {
-		fmt.Println("所有recalled消息查询错误:", err)
+		log.Debug("所有recalled消息查询错误:", err)
 	}
 
 	return
@@ -335,16 +419,73 @@ func resetRecalledState(messageReceiver string, messageIdClient string) (err err
 	//** 1.连接数据库
 	session, err := getSession()
 	if err != nil {
-		fmt.Println("数据库连接错误:", err)
+		log.Debug("数据库连接错误:", err)
 		return
 	}
 	defer session.Close()
 
 	c := session.DB(database).C(sourceRecall)
-	err = c.Update(bson.M{"messagecreator": messageReceiver, "messageidclient": messageIdClient}, bson.M{"$set": bson.M{"isrecalled": true}})
+	err = c.Update(bson.M{"messagecreator": messageReceiver, "messageidclient": messageIdClient, "isrecalled": false}, bson.M{"$set": bson.M{"isrecalled": true}})
 
 	if err != nil {
-		fmt.Println("UpdateAll错误:", err)
+		log.Debug("UpdateAll错误:", err)
+	}
+	return
+}
+
+//******http 的推送调用
+func addSpecialMessage(receiveAccount string, createAccount string,  messageKind string, messageIdClient string, content string) (err error) {
+	//** 1.连接数据库
+	session, err := getSession()
+	if err != nil {
+		log.Debug("数据库连接错误:", err)
+		return
+	}
+	defer session.Close()
+
+	c := session.DB(database).C(sourceSpecial)
+
+	err = c.Insert(&SpecialMessage{receiveAccount, createAccount,messageKind, messageIdClient, content, false})
+	if err != nil {
+		log.Debug("addSpecialMessage 数据插入错误")
+	}
+
+	return
+}
+func getSpecialMessage(receiveAccount string) (resultMessageArr []SpecialMessage, err error) {
+
+	//** 1.连接数据库
+	session, err := getSession()
+	if err != nil {
+		log.Debug("数据库连接错误:", err)
+		return
+	}
+	defer session.Close()
+
+	c := session.DB(database).C(sourceSpecial)
+	err = c.Find(bson.M{"receiveaccount": receiveAccount, "isreceived": false}).All(&resultMessageArr)
+
+	if err != nil {
+		log.Debug("所有recalled消息查询错误:", err)
+	}
+
+	return
+}
+
+func resetSpecialState(receiveAccount string, messageIdClient string) (err error) {
+	//** 1.连接数据库
+	session, err := getSession()
+	if err != nil {
+		log.Debug("数据库连接错误:", err)
+		return
+	}
+	defer session.Close()
+
+	c := session.DB(database).C(sourceSpecial)
+	err = c.Update(bson.M{"receiveaccount": receiveAccount, "messageidclient": messageIdClient, "isreceived": false}, bson.M{"$set": bson.M{"isreceived": true}})
+
+	if err != nil {
+		log.Debug("UpdateAll错误:", err)
 	}
 	return
 }

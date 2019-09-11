@@ -6,7 +6,7 @@ import (
 	// "strings"
 	//***abc自己的代码
 	"errors"
-	"fmt"
+	// "fmt"
 )
 
 // developer could implement "Auth" interface for decide how get userId, or roomId
@@ -22,7 +22,7 @@ func NewDefaultAuther() *DefaultAuther {
 }
 
 func (a *DefaultAuther) Auth(token string) (userId int64, roomId int32, err error) {
-	fmt.Println("token = ", token)
+	// fmt.Println("token = ", token)
 	var whetherPutInRoom bool
 	var userIdTemp int64
 
@@ -45,7 +45,7 @@ func checkUserChatID(authBody string) (whetherPutInRoom bool, userId int64, err 
 	//1.  获得传过来的userid和password
 	userName := gjson.Get(authBody, "UserName").String()
 	password := gjson.Get(authBody, "Password").String()
-	fmt.Println(userName, " - ", password)
+	// fmt.Println(userName, " - ", password)
 
 	//2.  搜索数据库里的userid和password
 
@@ -55,7 +55,7 @@ func checkUserChatID(authBody string) (whetherPutInRoom bool, userId int64, err 
 	//3.Compare
 	// fmt.Println("userName = ", userName, "password = ", password)
 	userId, result, err := authIMUser(userName, password)
-	fmt.Println("userId = ", userId, "result = ", result, "err = ", err)
+	// fmt.Println("userId = ", userId, "result = ", result, "err = ", err)
 
 	if err != nil || result == false {
 		userId = -1
@@ -68,9 +68,10 @@ func checkUserChatID(authBody string) (whetherPutInRoom bool, userId int64, err 
 //***根据userName 查询chatId
 func changeUserNameToUserId(userAccount string) (userId int64, err error) {
 
-	// fmt.Println("userAccount = ", userAccount)
+	// fmt.Println("changeUserNameToUserId Method, userAccount = ", userAccount)
 	userId, err = getUserChatId(userAccount)
 
+	// fmt.Println("userId = ", userId, "err = ", err)
 	if err != nil {
 		userId = -1
 	}

@@ -10,11 +10,15 @@ import (
 	"time"
 
 	log "github.com/thinkboy/log4go"
+
+	//****我的代码
+	"fmt"
 )
 
 func InitHTTP() (err error) {
 	// http listen
 	var network, addr string
+	fmt.Println("Conf.HTTPAddrs = ", Conf.HTTPAddrs)
 	for i := 0; i < len(Conf.HTTPAddrs); i++ {
 		httpServeMux := http.NewServeMux()
 		httpServeMux.HandleFunc("/1/push", Push)
@@ -23,6 +27,8 @@ func InitHTTP() (err error) {
 		httpServeMux.HandleFunc("/1/push/room", PushRoom)
 		httpServeMux.HandleFunc("/1/server/del", DelServer)
 		httpServeMux.HandleFunc("/1/count", Count)
+		httpServeMux.HandleFunc("/IMNotify", ImNotify)           //设置访问的路由
+		httpServeMux.HandleFunc("/GetPushMethod", GetPushMethod) //设置访问的路由
 		log.Info("start http listen:\"%s\"", Conf.HTTPAddrs[i])
 		if network, addr, err = inet.ParseNetwork(Conf.HTTPAddrs[i]); err != nil {
 			log.Error("inet.ParseNetwork() error(%v)", err)
@@ -291,4 +297,49 @@ func DelServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	return
+}
+
+//***** http推送
+func ImNotify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method Not Allowed", 405)
+		return
+	}
+	var (
+		receiveAccount = r.URL.Query().Get("account")
+		createAccount = r.URL.Query().Get("creator")
+		messageKind    = r.URL.Query().Get("notifyType")
+		content        = r.URL.Query().Get("content")
+		res            = map[string]interface{}{"ret": OK}
+	)
+	defer retWrite(w, r, res, time.Now())
+	// fmt.Println("receiveAccount = ", receiveAccount, "messageKind = ", messageKind)
+	if receiveAccount == "" || messageKind == "" {
+		log.Error("GET 参数不对receiveAccount = ", receiveAccount, " messageKind = ", messageKind)
+		res["ret"] = "GET 参数不对"
+	} else {
+		sendHttpSpacialImMessage(receiveAccount, createAccount, messageKind, content)
+	}
+
+}
+
+func GetPushMethod(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method Not Allowed", 405)
+		return
+	}
+	var (
+		receiveAccount = r.URL.Query().Get("account")
+		content        = r.URL.Query().Get("content")
+		res            = map[string]interface{}{"ret": OK}
+	)
+	defer retWrite(w, r, res, time.Now())
+
+	// fmt.Println("receiveAccount = ", receiveAccount, "messageKind = ", messageKind)
+	if receiveAccount == "" || content == "" {
+		log.Error("GET 参数不对receiveAccount = ", receiveAccount, " content = ", content)
+		res["ret"] = "GET 参数不对"
+	} else {
+		OtherPushMethod(receiveAccount, content)
+	}
 }

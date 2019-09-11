@@ -95,16 +95,16 @@ $ cp job-log.xml $GOPATH/bin/
 ### 五、启动goim
 ```sh
 $ cd /$GOPATH/bin
-$ nohup $GOPATH/bin/router -c $GOPATH/bin/router.conf 2>&1 > /data/logs/goim/panic-router.log &
-$ nohup $GOPATH/bin/logic -c $GOPATH/bin/logic.conf 2>&1 > /data/logs/goim/panic-logic.log &
-$ nohup $GOPATH/bin/comet -c $GOPATH/bin/comet.conf 2>&1 > /data/logs/goim/panic-comet.log &
-$ nohup $GOPATH/bin/job -c $GOPATH/bin/job.conf 2>&1 > /data/logs/goim/panic-job.log &
+$ nohup $GOPATH/bin/router -c $GOPATH/bin/router.conf 2>&1 > $GOPATH/bin/logs/panic-router.log &
+$ nohup $GOPATH/bin/logic -c $GOPATH/bin/logic.conf 2>&1 > $GOPATH/bin/logs/panic-logic.log &
+$ nohup $GOPATH/bin/comet -c $GOPATH/bin/comet.conf 2>&1 > $GOPATH/bin/logs/panic-comet.log &
+$ nohup $GOPATH/bin/job -c $GOPATH/bin/job.conf 2>&1 > $GOPATH/bin/logs/panic-job.log &
 ```
 
 
 
 ///////
-$ nohup $GOPATH/bin/router -c $GOPATH/bin/router.conf 2>&1 > /Users/a123/Documents/go/src/goim/data/logs/goim/panic-router.log &
+$ nohup $GOPATH/bin/router -c $GOPATH/bin/router.conf 2>&1 > $GOPATH/src/goim/logs/panic-router.log &
 $ nohup $GOPATH/bin/logic -c $GOPATH/bin/logic.conf 2>&1 > /Users/a123/Documents/go/src/goim/data/logs/goim/panic-logic.log &
 $ nohup $GOPATH/bin/comet -c $GOPATH/bin/comet.conf 2>&1 > /Users/a123/Documents/go/src/goim/data/logs/goim/panic-comet.log &
 $ nohup $GOPATH/bin/job -c $GOPATH/bin/job.conf 2>&1 > /Users/a123/Documents/go/src/goim/data/logs/goim/panic-job.log &

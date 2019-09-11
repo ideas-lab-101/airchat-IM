@@ -151,10 +151,11 @@ func (server *Server) serveWebsocket(conn *websocket.Conn, tr *itime.Timer) {
 		if p, err = ch.CliProto.Set(); err != nil {
 			break
 		}
+
 		if err = p.ReadWebsocket(conn); err != nil {
 			break
 		}
-		//p.Time = *globalNowTime
+
 		if p.Operation == define.OP_HEARTBEAT {
 			// fmt.Println("心跳包")
 			tr.Set(trd, hb)

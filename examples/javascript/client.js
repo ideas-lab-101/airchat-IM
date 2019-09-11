@@ -17,7 +17,7 @@
 
         function connect() {
 
-            var ws = new WebSocket('ws://localhost:8090/sub');
+            var ws = new WebSocket('ws://localhost:8089/sub');
             var auth = false;
 
             ws.onopen = function() {

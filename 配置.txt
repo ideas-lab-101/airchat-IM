@@ -1,0 +1,61 @@
+//*******docker
+1.启动
+docker run --name mongodb -p 27017:27017 -v /Users/a123/Documents/mongodb/data/db:/data/db -d mongo mongod --auth
+
+
+2.grouch
+[root@VM_0_14_centos goPush]# docker run --name gopush -p 30010:8088 -d \
+> -v /opt/goPush:/opt/goPush \
+> -v /opt/goPush/config.yml:/config.yml \
+> appleboy/gorush
+
+
+3.问题
+
+(1) exception in initAndListen: DBPathInUse: Unable to lock the lock file: /data/db/mongod.lock (Resource temporarily unavailable). Another mongod instance is already running on the /data/db directory, terminating
+(2) addr already in use
+
+
+4.上传文件
+scp -r  goim root@118.24.158.102:/root/dev/go/bin
+scp -r  root@118.24.158.102:/root/dev/go/bin/logs  /Users/a123/Desktop/日志
+
+5.交叉编译
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
+
+//*******修改推送
+1. logic文件修改
+2. config文件修改
+3. docker重启
+
+//****后台启动
+$ nohup ./router  2>&1 > ./log/panic-router.log &
+
+
+$ nohup ./logic 2>&1 >./log/panic-logic.log &
+
+$ nohup ./comet 2>&1 > ./log/panic-comet.log &
+
+
+$ nohup ./job 2>&1 > ./log/panic-job.log &
+
+//****cocoaPods
+https://code.aliyun.com/Magi/CocoaPods.git
+
+
+//****服务器启动
+1. 
+nohup ./router  2>&1 > ./log/panic-router.log &
+2. 
+nohup ./logic 2>&1 >./log/panic-logic.log &
+3. 
+./supervisord -c ./supervisor_sh.conf -d
+4. 
+nohup ./job 2>&1 > ./log/panic-job.log &
+
+
+
+docker exec -it mongodb bin/bash
+
+
+

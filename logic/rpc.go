@@ -106,7 +106,7 @@ func (r *RPC) DeliverMessage(arg *proto.DeliverMessageArg, reply *proto.DeliverM
 		return
 	}
 
-	err = processMessage(string(arg.Message))
+	err = processMessage(string(arg.Message), string(arg.MessageSendTime))
 	if err != nil {
 		reply.HasError = true
 	}
@@ -195,5 +195,15 @@ func (r *RPC) ClientIsTypeing(arg *proto.ClientIsTypeingArg, reply *proto.Client
 
 	//***忽略错误处理
 
+	return
+}
+
+func (r *RPC) HttpSpacialMsgReset(arg *proto.HttpSpacialMsgResetArgs, reply *proto.HttpSpacialMsgResetReply) (err error) {
+	if arg == nil {
+		err = ErrDeliverMessageArg
+		log.Error("logicServiceIsTypeing() error(%v)", err)
+		return
+	}
+	resetSpacialMessage(string(arg.MsgResetInfo))
 	return
 }

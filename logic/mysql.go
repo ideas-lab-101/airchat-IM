@@ -2,72 +2,63 @@ package main
 
 //mysql -h 121.42.237.244 -u root -p
 import (
-	"database/sql"
-	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-)
-
-var (
-	dbhostsip  = "gz-cdb-09xb7bmb.sql.tencentcdb.com:63109" //IP地址
-	dbusername = "root"                                     //用户名
-	dbpassword = "Sagacity@db2"                             //密码
-	dbname     = "engram"                                   //表名
+	"github.com/tidwall/gjson"
+	"io/ioutil"
+	"net/http"
 )
 
 //******* 私信处理
 func authIMUser(userName string, password string) (userId int64, result bool, err error) {
-	mysqlInfo := dbusername + ":" + dbpassword + "@tcp(" + dbhostsip + ")/" + dbname + "?charset=utf8"
-	// fmt.Println("mysqlInfo：", mysqlInfo)
 
-	db, err := sql.Open("mysql", mysqlInfo)
+	result = true
+	url := "http://airchat.ideas-lab.cn/api/system/v2/authUser?account=" + userName + "&password=" + password
+
+	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("mysql连接错误：", err)
 		result = false
+		return
 	}
 
-	defer db.Close()
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		result = false
+		return
+	}
 
-	err = db.QueryRow("SELECT id FROM user_login WHERE login_name = ? AND password = ?", userName, password).Scan(&userId)
+	code := gjson.Get(string(body), "code").Int()
+	if code == 1 {
+		dataString := gjson.Get(string(body), "data").String()
+		userInfoString := gjson.Get(string(dataString), "userInfo").String()
+		
+		id := gjson.Get(userInfoString, "id").Int()
+		token := gjson.Get(userInfoString, "token").String()
+		voiceSettings := gjson.Get(userInfoString, "voice_settings").String()
+		os_type := gjson.Get(userInfoString, "os_type").String()
+		userId = id
 
-	// fmt.Println("err = ", err, "userId = ", userId)
-
-	if err == nil {
-		result = true
+		insertUserInfo(userName, token, userId, voiceSettings, os_type)
+	} else {
+		result = false
 	}
 
 	return
 }
 
 func getUserChatId(userAccount string) (userChatID int64, err error) {
-	mysqlInfo := dbusername + ":" + dbpassword + "@tcp(" + dbhostsip + ")/" + dbname + "?charset=utf8"
-	// fmt.Println("mysqlInfo：", mysqlInfo)
-
-	db, err := sql.Open("mysql", mysqlInfo)
-	if err != nil {
-		fmt.Println("mysql连接错误：", err)
-	}
-
-	defer db.Close()
-
-	err = db.QueryRow("SELECT id FROM user_login WHERE login_name = ? ", userAccount).Scan(&userChatID)
-
+	userInfo, err := getUserId(userAccount)
+	userChatID = userInfo.UserId
+	// fmt.Println("userChatID", userChatID, " err = ", err)
 	return
 }
 
 //********* 推送的处理
-func getUserDeviceToken(userAccount string) (deviceToken, voiceSetting string, err error) {
-	mysqlInfo := dbusername + ":" + dbpassword + "@tcp(" + dbhostsip + ")/" + dbname + "?charset=utf8"
-	// fmt.Println("mysqlInfo：", mysqlInfo)
+func getUserDeviceToken(userAccount string) (deviceToken, voiceSetting, osType string, err error) {
 
-	db, err := sql.Open("mysql", mysqlInfo)
-	if err != nil {
-		fmt.Println("mysql连接错误：", err)
-	}
-
-	defer db.Close()
-
-	// err = db.QueryRow("select ud.token from user_login ul left join user_device ud on ud.user_id=ul.id where ul.login_name = ? and ud.state = 1", userAccount).Scan(&deviceToken)
-	err = db.QueryRow("select ud.token,ui.voice_settings from user_login ul left join user_device ud on ud.user_id=ul.id left join user_info ui on ul.id=ui.user_id where ul.login_name = ? and ud.state = 1", userAccount).Scan(&deviceToken, &voiceSetting)
+	userInfo, err := getUserDeviceTokenMoethod(userAccount)
+	deviceToken = userInfo.DeviceToken
+	voiceSetting = userInfo.VoiceSettings
+	osType = userInfo.OsType
 
 	return
 }

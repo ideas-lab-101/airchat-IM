@@ -20,7 +20,8 @@ type DisconnReply struct {
 }
 
 type DeliverMessageArg struct {
-	Message string
+	Message         string
+	MessageSendTime string
 }
 
 type DeliverMessageReply struct {
@@ -75,5 +76,23 @@ type ClientRecalledOneSuccessArg struct {
 }
 
 type ClientRecalledOneSuccessArgReply struct {
+	ErrorString string
+}
+
+//****这个是http的私信调用
+type HttpSpacialImMessageArgs struct {
+	ReceiveAccount string
+	MessageKind    string
+}
+
+type HttpSpacialImMessageReply struct {
+	ErrorString string
+}
+
+type HttpSpacialMsgResetArgs struct {
+	MsgResetInfo string
+}
+
+type HttpSpacialMsgResetReply struct {
 	ErrorString string
 }

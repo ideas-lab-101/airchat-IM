@@ -5,6 +5,7 @@ import (
 	"github.com/tidwall/gjson"
 	"goim/libs/define"
 	"goim/libs/proto"
+	"strconv"
 	"time"
 	//***abc自己的代码
 	// "fmt"
@@ -36,14 +37,19 @@ func (operator *DefaultOperator) Operate(p *proto.Proto) (err error) {
 		pProcess.SeqId = p.SeqId
 		pProcess.Ver = p.Ver
 
+		messageSendTime := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+		messageSendTime = messageSendTime[:13]
+
+		// fmt.Println(">>", timestamp, " ", string(p.Body))
+
 		//2. 通知客户端消息发送成功
 		p.Operation = define.OP_SEND_SMS_SUCCESS
 		messageIdClient := gjson.Get(string(p.Body), "MessageIdClient").String()
-		p.Body = []byte("{\"Code\":1, \"MessageIdClient\": \"" + messageIdClient + "\"}")
+		p.Body = []byte("{\"Code\":1, \"MessageIdClient\": \"" + messageIdClient + "\", \"MessageSendTime\": \"" + messageSendTime + "\"}")
 		log.Info("send sms proto: %v", p.String())
 
 		go func() {
-			err = processMessage(pProcess)
+			err = processMessage(pProcess, messageSendTime)
 		}()
 
 	} else if p.Operation == define.OP_CLIENT_SMS_RECALLED {
@@ -76,6 +82,10 @@ func (operator *DefaultOperator) Operate(p *proto.Proto) (err error) {
 	} else if p.Operation == define.OP_CLIENT_RESETPUSHNUMBER {
 		//***重置小红点
 		resetPushNumber(p)
+
+	} else if p.Operation == define.OP_CLIENT_RECESPECIAL_MSG {
+		//***重置Special消息
+		resetSpecialMessageState(p)
 
 	} else if p.Operation == define.OP_TEST {
 		log.Debug("test operation: %s", body)

@@ -6,9 +6,8 @@ import (
 	"runtime"
 
 	log "github.com/thinkboy/log4go"
-
-	//****我的代码
-	"fmt"
+	// //****我的代码
+	// "fmt"
 )
 
 func main() {
@@ -38,7 +37,6 @@ func main() {
 	if err := InitHTTP(); err != nil {
 		panic(err)
 	}
-	fmt.Println("KafkaAddrs ======>  ", Conf.KafkaAddrs)
 	if err := InitKafka(Conf.KafkaAddrs); err != nil {
 		panic(err)
 	}
