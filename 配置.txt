@@ -2,7 +2,6 @@
 1.启动
 docker run --name mongodb -p 27017:27017 -v /Users/a123/Documents/mongodb/data/db:/data/db -d mongo mongod --auth
 
-
 2.grouch
 [root@VM_0_14_centos goPush]# docker run --name gopush -p 30010:8088 -d \
 > -v /opt/goPush:/opt/goPush \
